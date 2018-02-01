@@ -4,42 +4,11 @@ import urllib
 import os
 import datetime
 import timeit
-os.chdir('/Users/wangzhen/PycharmProjects/hw258/Assignment2')
-import matplotlib
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
-
-import random
-random.seed(1)
-import math
 
 def parseData(fname):
     for l in urllib.urlopen(fname):
         yield l.strip().split(',')
-
-def tsdiff(t1, t2, bucket):
-    if (t1 > t2):
-        t1, t2 = t2, t1
-    return (datetime.datetime.fromtimestamp(t2).date().year - datetime.datetime.fromtimestamp(t1).date().year) / bucket
-start_ts = 942192000
-bucket = 1
-def preprocess(rating_data_time, start_ts):
-    for i in range(len(rating_data_time)):
-        for j in range(len(rating_data_time[i][1])):
-            rating_data_time[i][1][j] = \
-                (rating_data_time[i][1][j][0], rating_data_time[i][1][j][1],
-                 (tsdiff(int(rating_data_time[i][1][j][2]), start_ts, bucket)))
-    return rating_data_time
-def timerange(rating_data_time):
-    time_bucket = []
-    for user, rates in rating_data_time:
-        for _, _, time in rates:
-            time_bucket.append(time)
-    return (min(time_bucket), max(time_bucket))
-
-data_train = list(parseData('ratings_train.csv'))
-data_valid = list(parseData('ratings_validation.csv'))
-data_test = list(parseData('ratings_test.csv'))
 
 class BiasLFM(object):
     def __init__(self, rating_data, rating_data1, F, alpha=0.01, lmbd1=0.1, lmbd2=0.1,
@@ -343,53 +312,11 @@ class TimeLM1(object):
                 num += 1
         return error / num
 
-
-#F=0, lmbd=0.1, alpha=0.05, decay=0.7 1.0945
-
-#F=2, lmbd1=0.1, lmbd2=2.0, alpha=0.05, decay=0.7  1.0942
-#F=10, lmbd1=0.1, lmbd2=3.0, alpha=0.05, decay=0.7, 1.0943
-biaslfm = BiasLFM(data_train, data_valid,
-                  F=10, max_iter=200, lmbd1=0.1, lmbd2=3.0, alpha=0.05, decay=0.7)
-biaslfm.train()
-print(biaslfm.mse(data_valid))
-print(biaslfm.mse(data_test))
-
-#F=10, lmbd1=0.1, lmbd2=3.0, lmbd3=20.0, alpha=0.05, decay=0.7, eps=0.0001  1.0943
 svdpp = SVDPP(data_train, data_valid,
               F=10, max_iter=200, lmbd1=0.1, lmbd2=3.0, lmbd3=10.0,  alpha=0.05, decay=0.7)
 svdpp.train()
 print(svdpp.mse(data_valid))
 print(svdpp.mse(data_test))
-
-#lmbd=0.1, alpha=0.05, decay=0.7, t_bin=16(year) 1.1845
-#lmbd=0.1, alpha=0.05, decay=0.7, t_bin=179(year) 1.2843
-timelm = TimeLM(data_train, data_valid,
-                  max_iter=200, lmbd=0.1, alpha=0.05, decay=0.7, t_bin=179)
-timelm.train()
-print(timelm.mse(data_valid))
-print(timelm.mse(data_test))
-
-#t_bin=16 1.0959
-#t_bin=8 1.0955
-#t_bin=6 1.0955
-#t_bin=4 1.0957
-#t_bin=3 1.0957
-#t_bin=2 1.0949 (8)
-
-timelm1 = TimeLM1(data_train, data_valid,
-                  max_iter=200, lmbd=0.1, alpha=0.05, decay=0.7, t_bin=16)
-timelm1.train()
-print(timelm1.mse(data_valid))
-print(timelm1.mse(data_test))
-
-### to prove time may just be noise ###
-rating_year = defaultdict(list)
-for user, rates in data_train:
-    for _,rate,time in rates:
-        rating_year[time].append(rate)
-rating_year_mean = [sum(rating_year[time]) / len(rating_year[time]) for time in rating_year]
-rating_year_var = [np.var(rating_year[time]) for time in rating_year]
-rating_year_num = [len(rating_year[time]) for time in rating_year]
 
 def plotTwo(xLabel, (yLabelL, yLabelR), xValue, (yValueL, yValueR)):
     fig = plt.figure(dpi = 100)
@@ -421,10 +348,3 @@ for k in range(21):
         error += biaslfm.mse(valid1)
     error /= fold
     valid_error.append(error)
-
-valid_error_record = \
-[1.2964437631599144, 1.2961784883873126, 1.2962954862130049, 1.2962015391822683, 1.2962425674137144,
- 1.2962418144806374, 1.2962432744371768, 1.2962310638337911, 1.2962196391748189, 1.2962474710397349,
- 1.2962549490622048, 1.2962476594514574, 1.2962358325489578, 1.2962388578608628, 1.296257883342701,
- 1.2962462748431967, 1.2962372074012567, 1.2962358621459016, 1.2962464323858267, 1.2962484595091068,
- 1.2962312320079277]
